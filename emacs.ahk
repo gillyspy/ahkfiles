@@ -27,6 +27,32 @@ is_pre_spc = 0
 is_emacs = 0
 is_mac_super_relevant = 0
 
+do_emacs_and_mac( command, fn ){
+  if no_neuter(1)
+    for_Mac_super( command, Func(fn) )
+  else 
+    pipe_ctrl( command )
+  return
+}
+
+
+;
+do_emacs_only( command, fn){
+  return do_emacs_and_mac( command, fn )
+  ; this is the same for now
+  ; TODO: refactor this to pass in is_emacs setting
+}
+
+no_neuter( is_emacs_relevant){
+     WinGet, pname, ProcessName, A  ; e.g. Code.exe
+    if( pname = "Code.exe" ){
+      return 0
+    } else {
+      return is_target( is_emacs_relevant )
+    }
+    return 1 ; should never get here
+}
+
 ; Applications you want to disable emacs-like keybindings
 ; (Please comment out applications you don't use)
 is_target( is_emacs_relevant )
@@ -34,7 +60,7 @@ is_target( is_emacs_relevant )
   ;;MsgBox %is_emacs_relevant%
   global is_emacs
   IfWinActive,ahk_class ConsoleWindowClass ; Cygwin
-    Return 1 
+    Return 0
   IfWinActive,ahk_class MEADOW ; Meadow
     Return 1 
   IfWinActive,ahk_class cygwin/x X rl-xterm-XTerm-0
@@ -66,20 +92,27 @@ is_target( is_emacs_relevant )
 }
 pipe_ctrl( ctrl_command ){ 
    ;ctrl_command is the A_ThisHotkey
-   
+   global is_mac_super_relevant
    theKey :=  StrReplace( ctrl_command, "LControl & ", "^")  ; send the hotkey as typical
-   ;MsgBox %ctrl_command%   %theKey%
+    theKey :=  StrReplace( theKey, "LWin & ", "#")  ; send the hotkey as typical
+   MsgBox, 4,, %ctrl_command% %theKey% %is_mac_super_relevant%,1
    Send %theKey%
    Return
 }
 
-for_Mac_super( command ){
+for_Mac_super( command, myfn ){
   global is_mac_super_relevant
-  ;MsgBox %command% %is_mac_super_relevant%
+  ;MsgBox %command% %is_mac_super_relevant% myfn.Name
   if (is_mac_super_relevant){
-    is_mac_super_relevant = 0
-    pipe_ctrl( command )
-  } 
+    global is_mac_super_relevant = 0
+    if( myfn.Name ){
+      myfn.Call()
+    } else {
+      pipe_ctrl( command )
+    }
+  } else if( myfn.Name ){
+    myfn.Call()
+  }
   return 0
 }
 
@@ -187,7 +220,7 @@ save_buffer()
   Return
 }
 
-; ^g
+; ^c
 kill_emacs()
 {
   Send !{F4}
@@ -352,7 +385,7 @@ LControl & x::
 LControl & c::
   If is_target(1){ 
     pipe_ctrl( A_ThisHotkey )
-}
+} 
   Else
   {
     If is_pre_x
@@ -364,7 +397,7 @@ LControl & c::
 ;;     pipe_ctrl( A_ThisHotkey )
 	;Send %theKey%
 ;}
-;;   Else
+;;   Elsen
 ;;     open_line()
 ;;   Return
 LControl & g::
@@ -456,6 +489,7 @@ LControl & /::
   Return  
   
 Alt & >::
+  do_emacs_only( A_ThisHotkey , scroll_all_down)
    if is_target(1)
        pipe_ctrl( A_ThisHotkey )
    Else 
@@ -463,12 +497,9 @@ Alt & >::
    Return 
    
 Alt & <::
-   if is_target(1)
-       pipe_ctrl( A_ThisHotkey )
-   Else 
-      scroll_all_up()
+   ;  is_target(1) ?
+   do_emacs_only( A_ThisHotkey , scroll_all_up)
    Return 
-
   
 LControl & {::
    if is_target(1)
@@ -554,25 +585,19 @@ LControl & h::
     delete_backward_char()
   Return
 LControl & k::
-  If is_target(0){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    kill_line()
+  do_emacs_and_mac( A_ThisHotKey,  Func("kill_line") )
+ ; If no_neuter(0)
+  ;  for_Mac_super( A_ThisHotKey, Func("kill_line") )
+ ; else 
+ ;   pipe_ctrl( A_ThisHotKey )
   Return
 
 ; ^a
 LControl & a::
-  ;MsgBox This was called
-  If is_target(0){ 
-    pipe_ctrl( A_ThisHotkey ) 
-    ; theKey :=  StrReplace( A_ThisHotkey, "LControl & ", "^")
-	;Send %theKey%
-}
-  Else if ( for_Mac_super( A_ThisHotKey) )
-    return
+  If no_neuter(0) 
+    for_Mac_super( A_ThisHotKey , Func("move_beginning_of_line") )
   else 
-    move_beginning_of_line()
+    pipe_ctrl( A_ThisHotKey ) 
   Return
   
 LControl & e::
@@ -604,6 +629,8 @@ LControl & f::
       forward_char()
   }
   Return  
+  
+
 	
 ; --------------------------------------------------------------
 ; Mac-like screenshots in Windows (requires Windows 10 Snip & Sketch)
@@ -630,19 +657,20 @@ LControl & f::
   return
   
 ; Selecting
-#a::
+LWin & a::
   global is_mac_super_relevant = 1
   pipe_ctrl("^a")
   return 
  
 ; Copying
-#c::
+LWin & c::
+  Send {Lwin up}
   global is_mac_super_relevant = 1
-  pipe_ctrl("^c")
+  for_mac_super( "^c", "")
   return
   
 ; Pasting
-#v::
+LWin & v::
   global is_mac_super_relevant = 1
   pipe_ctrl("^v")
   return 
@@ -662,26 +690,32 @@ LControl & f::
   return 
 
 ; Finding
-#f::
+LWin & f::
   ;Send ^f
   global is_mac_super_relevant = 1
   pipe_ctrl("^f")
   return 
 
 ; Undo;
-#z::
+LWin & z::
   ;Send ^z
   global is_mac_super_relevant = 1
   pipe_ctrl("^z")
   return 
 
 ; Redo
-#y::
+Lwin & y::
   ;Send ^y
   global is_mac_super_relevant = 1
   pipe_ctrl("^y")
   return 
 
+;refresh
+#r::
+  global is_mac_super_relevant = 1
+  for_mac_super("^r","")
+  return 
+  
 ; New tab
 ;#t::
   ;Send ^t
@@ -699,7 +733,14 @@ Lwin & w::
 
 ; Close windows (cmd + q to Alt + F4)
 #q::Send !{F4}
+   return
 
+;open run similar to spotlight
+#Space::
+  global is_mac_super_relevant = 1
+  pipe_ctrl("#r")
+  return
+  
 ; Remap Windows + Tab to Alt + Tab.
 ;Lwin & Tab::AltTab
 
@@ -710,17 +751,24 @@ Lwin & w::
 ;toggle Emacs using Esc key
 ; Note: Shared Mac basics will remain such as ^a for beginning of line
 ; TODO: turn on other Mac shortcuts such as super+W etc
-Esc::  
+^`::  
    global is_emacs
+   WinGetClass, class, A
+   ;wtf := Process, Exist, "Code.exe"
+   
+   WinGet, wtf, ProcessName, A ;, ALControl & xLControl & s
+    ;ahk_exe %activeprocess%
+    
    If (is_emacs){
-	MsgBox, 0,48 , Emacs Mode is active now, 1
+	MsgBox, 48, %wtf% , Emacs Mode is active (%is_emacs%) now, 2
        global is_emacs = 0
    }Else{ 
-	MsgBox, 0, 48, Emacs is off - Mac is active now, 1
+	MsgBox, 48, %wtf%, Emacs is off (%is_emacs%)- Mac is still active now, 2
 		global is_emacs = 1
 	}
 	return
 Esc & x::
-   MsgBox, 0, 48, Emacs & Mac are off (you must relaunch the script), 4
+   MsgBox, 48, ShortcutKeys, Emacs & Mac are off (you must relaunch the script), 4
    ExitApp  ;Escape + x key will exit
+
 
