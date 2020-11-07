@@ -24,55 +24,78 @@ is_pre_x = 0
 ; turns to be 1 when ctrl-space is pressed
 is_pre_spc = 0
 ; 1 when ctrl is held down
-is_emacs = 0
-is_mac_super_relevant = 0
-
-do_emacs_and_mac( command, fn ){
-  if no_neuter(1)
-    for_Mac_super( command, Func(fn) )
-  else 
-    pipe_ctrl( command )
-  return
-}
-
-
 ;
-do_emacs_only( command, fn){
-  return do_emacs_and_mac( command, fn )
-  ; this is the same for now
-  ; TODO: refactor this to pass in is_emacs setting
-}
+try_emacs = 1
+try_mac = 1
+is_emacs_relevant = 1
 
-no_neuter( is_emacs_relevant){
-     WinGet, pname, ProcessName, A  ; e.g. Code.exe
+; -----------------
+; defaults
+; -----------------
+mac_command = 0
+emacs_command = 0
+super_command = 0
+
+; ----------------------------
+; return 1 if mac is in play
+; ----------------------------
+is_mac_env( is_relevant ){
+  global try_mac
+  if(  try_mac  ){
+    WinGet, pname, ProcessName, A  ; e.g. Code.exe
     if( pname = "Code.exe" ){
       return 0
     } else {
-      return is_target( is_emacs_relevant )
+       return is_target( try_mac )
     }
-    return 1 ; should never get here
+  } else {
+    return 0
+  }
 }
 
+; ----------------------------
+; return 1 if emacs is in play (also mac)
+; ----------------------------
+is_emacs_env( is_relevant  ){
+  ; if command-line mac is out then emacs is also out
+  global try_emacs
+  global try_mac = 1
+  if( not is_mac_env( try_emacs ) ){
+    return 0
+  }
+
+  if( try_emacs ){
+    WinGet, pname, ProcessName, A  ; e.g. Code.exe
+    if( pname = "Code.exe" ){
+      return 0
+    } else {
+       return is_target( is_relevant )
+    }
+  } else {
+    return 0
+  }
+}
+
+; -----------------------------------------------------
 ; Applications you want to disable emacs-like keybindings
 ; (Please comment out applications you don't use)
 is_target( is_emacs_relevant )
 {
   ;;MsgBox %is_emacs_relevant%
-  global is_emacs
+
   IfWinActive,ahk_class ConsoleWindowClass ; Cygwin
     Return 0
   IfWinActive,ahk_class MEADOW ; Meadow
-    Return 1 
+    Return 0 
   IfWinActive,ahk_class cygwin/x X rl-xterm-XTerm-0
-    Return 1
+    Return 0
   IfWinActive,ahk_class MozillaUIWindowClass ; keysnail on Firefox
     Return 1
   ; Avoid VMwareUnity with AutoHotkey
   IfWinActive,ahk_class VMwareUnityHostWndClass
-    Return 1
+    Return 0
   IfWinActive,ahk_class Vim ; GVIM
-    Return 1
-
+    Return 0
       
 ;  IfWinActive,ahk_class SWT_Window0 ; Eclipse
 ;    Return 1
@@ -84,41 +107,69 @@ is_target( is_emacs_relevant )
 ;     Return 1  
 ;   IfWinActive,ahk_class XEmacs ; XEmacs on Cygwin
 ;     Return 1
-	if(is_emacs and is_emacs_relevant){
+	if(is_emacs_relevant){
 	;Send 1
-	    Return global is_emacs
+	    Return 1
 	} 
   Return 0
 }
+
 pipe_ctrl( ctrl_command ){ 
    ;ctrl_command is the A_ThisHotkey
-   global is_mac_super_relevant
    theKey :=  StrReplace( ctrl_command, "LControl & ", "^")  ; send the hotkey as typical
     theKey :=  StrReplace( theKey, "LWin & ", "#")  ; send the hotkey as typical
-   MsgBox, 4,, %ctrl_command% %theKey% %is_mac_super_relevant%,1
    Send %theKey%
    Return
 }
 
-for_Mac_super( command, myfn ){
-  global is_mac_super_relevant
-  ;MsgBox %command% %is_mac_super_relevant% myfn.Name
-  if (is_mac_super_relevant){
-    global is_mac_super_relevant = 0
-    if( myfn.Name ){
-      myfn.Call()
-    } else {
-      pipe_ctrl( command )
-    }
-  } else if( myfn.Name ){
-    myfn.Call()
-  }
-  return 0
-}
 
+
+; ---------------------------------------------------------------------------------------
+; e.g. 
+; execute_this( "^a", "move_beginning_of_line", "move_beginning_of_line", super_command )
+; ---------------------------------------------------------------------------------------
+execute_this( fallback, mac_cmd, emacs_cmd, super_cmd ){
+  ;MsgBox, 4, , %fallback% %emacs_cmd% %mac_cmd% %super_cmd%, 4
+  global is_emacs_relevant
+  if (super_cmd ){
+   ;  MsgBox,4, , "has super %super_cmd%", 3""
+    global super_command = 0   ;reset
+    pipe_ctrl( super_cmd ) 
+    ; ??? this will cause a 1-iteration loop, but when it comes back here
+    ; it will fall through to fallback
+    ; TODO: verify this issue
+  } else if(emacs_cmd  and is_emacs_env(is_emacs_relevant) ) {
+   ; MsgBox, 4, , "has emacs_cmd and is_emacs_env", 4
+    myFn := Func(emacs_cmd)
+    myFn.Call()
+  } else if(mac_cmd and is_mac_env( is_mac_relevant )) {
+    myFn := Func( mac_cmd )
+    myFn.Call()
+  } else {
+    pipe_ctrl( fallback )
+  }
+  return
+}
+  
 ; -----------
 ; Emacs stubs
 ; -----------
+nada(){
+  return
+
+}
+mark_line(){
+global
+  if( not try_emacs)
+    return
+      
+  if is_pre_spc
+   is_pre_spc = 0
+  else 
+    is_pre_spc = 1
+   ;  MsgBox, 4, , "mark_line %is_pre_spc%", 3
+  return
+}
 
 ; ^o
 open_line()
@@ -212,6 +263,31 @@ find_file()
   Return
 }
 
+find_file_or_fwd(){
+  global
+  if is_pre_x
+    find_file()
+  else
+    forward_char()
+  return
+}
+
+
+set_pre_x(){
+  global is_pre_x = 1
+  return
+}
+
+;
+save_buff_or_search(){
+  global
+ if is_pre_x
+  save_buffer()
+ else
+  isearch_forward()
+ return
+}
+
 ; ^s
 save_buffer()
 {
@@ -223,15 +299,18 @@ save_buffer()
 ; ^c
 kill_emacs()
 {
-  Send !{F4}
-  global is_pre_x = 0
+  global
+  if (is_pre_x){
+    Send !{F4}
+    is_pre_x = 0
+  }
   Return
 }
 
 ; ^n
 previous_line()
 {
-  global
+  global 
   if is_pre_spc
     Send +{Up}
      ; 
@@ -376,21 +455,12 @@ backward_char()
 ; When "Send"ing the hot key I need to modify it otherwise it just prints out the word "LControl & Key"
 
 LControl & x::
-  If is_target( 1 ){
-     pipe_ctrl(A_ThisHotkey)
-}
-  Else
-    is_pre_x = 1
+  global super_command
+  execute_this( "^x", "nada", "set_pre_x", super_command )
   Return 
 LControl & c::
-  If is_target(1){ 
-    pipe_ctrl( A_ThisHotkey )
-} 
-  Else
-  {
-    If is_pre_x
-      kill_emacs()
-  }
+  global super_command
+  execute_this( "^c", "nada", "kill_emacs", super_command )
   Return  
 ;; ^o::
 ;;   If is_target()
@@ -401,11 +471,9 @@ LControl & c::
 ;;     open_line()
 ;;   Return
 LControl & g::
-  If is_target(1){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    quit()
+  global super_command
+  execute_this( "^g", "nada", "quit", super_command )
+  ;  quit()
   Return
 ;; ^j::
 ;;   If is_target()
@@ -416,68 +484,52 @@ LControl & g::
 ;;     newline_and_indent()
 ;;   Return
 LControl & m::
-  If is_target(1){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    newline()
+  global super_command
+  execute_this( "^m", "nada", "newline", super_command )
+   ; newline()
   Return
+  
 LControl & i::
-  If is_target(1){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    indent_for_tab_command()
+  global super_command
+  execute_this( "^i", "nada", "indent_for_tab_command", super_command )
+   ; indent_for_tab_command()
   Return
+  
 LControl & s::
-  If is_target(1){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-  {
-    If is_pre_x
-      save_buffer()
-    Else
-      isearch_forward()
-  }
+    global super_command 
+  execute_this( "^s", "save_buffer", "save_buff_or_search", super_command )
   Return
+  
 LControl & r::
-  If is_target(1){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    isearch_backward()
+  global super_command 
+  execute_this( "^r", "isearch_backward", "isearch_backward", super_command )
+   ; isearch_backward()
   Return
+  
 LControl & w::
-  If is_target(1){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    kill_region()
+  global super_command 
+  execute_this( "^w", "nada", "kill_region", super_command )
+   ; kill_region()
   Return
+  
 !w::
-  If is_target(1){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    kill_ring_save()
+  global super_command 
+  execute_this( "!w", "nada", "kill_ring_save", super_command )
+   ; kill_ring_save()
   Return
   
 LControl & y::
-  If is_target(0){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    yank()
+  global super_command 
+  execute_this( "^y", "yank", "yank", super_command )
+    ;yank()
   Return
 
 ; +^-::      ; if not using Synergy uncomment this
 LControl & -::   ; if using Synergy uncomment this
-  If is_target(1){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    undo()
+  global super_command 
+  execute_this( "^-", "nada", "undo", super_command )
+      ;scroll_up()
+   ; undo()
   Return  
 
 LControl & /::
@@ -489,75 +541,61 @@ LControl & /::
   Return  
   
 Alt & >::
-  do_emacs_only( A_ThisHotkey , scroll_all_down)
-   if is_target(1)
-       pipe_ctrl( A_ThisHotkey )
-   Else 
-      scroll_all_down()
+  global super_command
+  execute_this( "+!.","nada", "scroll_all_down", super_command )
+ 
+    ;  scroll_all_down()
    Return 
    
 Alt & <::
+  global super_command
+  execute_this( "+!.", "nada", "scroll_all_up", super_command )
    ;  is_target(1) ?
-   do_emacs_only( A_ThisHotkey , scroll_all_up)
+   ;do_emacs_only( A_ThisHotkey , scroll_all_up)
    Return 
   
 LControl & {::
-   if is_target(1)
-       pipe_ctrl( A_ThisHotkey )
-   Else 
-      scroll_up()
+   global super_command 
+  execute_this( "^v", "nada", "scroll_up", super_command )
+      ;scroll_up()
    Return 
+   
 LControl & }::
-   if is_target(1)
-       pipe_ctrl( A_ThisHotkey )
-   Else 
-      scroll_down()
-   Return 
+  global super_command 
+  execute_this( "^v", "nada", "scroll_down", super_command )
+  Return 
+   
 LControl & v::
-  If is_target(0){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    scroll_down()
+  global super_command 
+  execute_this( "^v", "scroll_down", "scroll_down", super_command )
   Return
+  
 !v::
-  If is_target(1){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    scroll_up()
+  global super_command 
+  execute_this( "!v", "nada", "scroll_up", super_command )
+   ; scroll_up()
   Return
 
 LControl & p::
-  If is_target(0) {
-    pipe_ctrl( A_ThisHotkey )
-  }
-  Else{
-    previous_line()
-	}
+  global super_command
+  ;execute_this( fallback, mac_command, emacs_command, super_command )
+  execute_this( "^p", "previous_line", "previous_line", super_command )
   Return
 
 LControl & n::
-  If is_target(0){ 
-   pipe_ctrl( A_ThisHotkey )
-  }
-  Else
-    next_line()
+  global super_command 
+  execute_this( "^n", "next_line", "next_line", super_command )
   Return
 
 ;$^{Space}::
 ;^vk20sc039::
 LControl & vk20::
-  If is_target(1)
-    Send {CtrlDown}{Space}{CtrlUp}
-  Else
-  {
-    If is_pre_spc
-      is_pre_spc = 0
-    Else
-      is_pre_spc = 1
-  }
+  global super_command
+  ;execute_this( fallback, mac_command, emacs_command, super_command )
+  execute_this( "{CtrlDown}{Space}{CtrlUp}", "mark_line", "mark_line", super_command )
+   ; Send {CtrlDown}{Space}{CtrlUp}
   Return
+  
 LControl & @::
   If is_target(1){ 
     pipe_ctrl( A_ThisHotkey )
@@ -571,67 +609,39 @@ LControl & @::
   }
   Return
 LControl & d::
-  If is_target(0){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    delete_char()
+  global super_command 
+  execute_this( "^d", "delete_char", "delete_char", super_command )
   Return
 LControl & h::
-  If is_target(0){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    delete_backward_char()
+  global super_command 
+  execute_this( "^h", "delete_backward_char", "delete_backward_char", super_command )
   Return
 LControl & k::
-  do_emacs_and_mac( A_ThisHotKey,  Func("kill_line") )
- ; If no_neuter(0)
-  ;  for_Mac_super( A_ThisHotKey, Func("kill_line") )
- ; else 
- ;   pipe_ctrl( A_ThisHotKey )
+  global super_command 
+  execute_this( "^k", "kill_line", "kill_line", super_command )
   Return
 
 ; ^a
 LControl & a::
-  If no_neuter(0) 
-    for_Mac_super( A_ThisHotKey , Func("move_beginning_of_line") )
-  else 
-    pipe_ctrl( A_ThisHotKey ) 
+  global super_command 
+  execute_this( "^a", "move_beginning_of_line", "move_beginning_of_line", super_command )
   Return
   
 LControl & e::
-  If is_target(0){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-    move_end_of_line()
+  global super_command 
+  execute_this( "^e", "move_end_of_line", "move_end_of_line", super_command )
   Return
   
 ; ^b
 LControl & b::
-  If is_target(0){ 
-    pipe_ctrl( A_ThisHotkey )
-  }
-  Else
-    backward_char()
+  global super_command 
+  execute_this( "^b", "backward_char", "backward_char", super_command )
   Return
 
-LControl & f::
-  If is_target( 0 ){ 
-    pipe_ctrl( A_ThisHotkey )
-}
-  Else
-  {
-    If is_pre_x
-      find_file()
-    Else
-      forward_char()
-  }
+LControl & f:: ; TODO: fix up is_pre_x
+  global super_command 
+  execute_this( "^f", "nada", "find_file_or_fwd", super_command )
   Return  
-  
-
-	
 ; --------------------------------------------------------------
 ; Mac-like screenshots in Windows (requires Windows 10 Snip & Sketch)
 ; --------------------------------------------------------------
@@ -648,78 +658,84 @@ LControl & f::
 
 ; Make Ctrl + S work with cmd (windows) key
 #s::
-  global is_emacs
-  if (is_emacs){
-    ;MsgBox,0, Emacs is on, 2
-    return
-  }else 
-    Send, ^s
+  global super_command = "^s"
+  Send, ^s
   return
   
 ; Selecting
 LWin & a::
-  global is_mac_super_relevant = 1
-  pipe_ctrl("^a")
+  global super_command = "^a"
+  Send %super_command%
+;
+  ;pipe_ctrl("^a")
   return 
  
 ; Copying
 LWin & c::
   Send {Lwin up}
-  global is_mac_super_relevant = 1
-  for_mac_super( "^c", "")
+;
+  global super_command = "{ctrldown}{c}{ctrlup}"
+  Send %super_command%
   return
   
 ; Pasting
 LWin & v::
-  global is_mac_super_relevant = 1
-  pipe_ctrl("^v")
+;
+  global super_command = "^v"
+  Send %super_command%
   return 
 
 ; Cutting
 #x::
   ;Send, ^x
-  global is_mac_super_relevant = 1
-  pipe_ctrl("^x")
+;
+  global super_command = "^x"
+  send %super_command%
   return 
 
 ; Opening
 #o::
   ;Send ^o
-  global is_mac_super_relevant = 1
-  pipe_ctrl("^o")
+;
+  global super_command = "^o"
+  Send %super_command%
   return 
 
 ; Finding
 LWin & f::
   ;Send ^f
-  global is_mac_super_relevant = 1
-  pipe_ctrl("^f")
+;
+  global super_command = "^f"
+  Send %super_command%
   return 
 
 ; Undo;
 LWin & z::
   ;Send ^z
-  global is_mac_super_relevant = 1
-  pipe_ctrl("^z")
+;
+  global super_command = "^z"
+  Send %super_command%
   return 
 
 ; Redo
 Lwin & y::
   ;Send ^y
-  global is_mac_super_relevant = 1
-  pipe_ctrl("^y")
+;
+  global super_command = "^y"
+  Send %super_command%
   return 
 
 ;refresh
 #r::
-  global is_mac_super_relevant = 1
-  for_mac_super("^r","")
+;
+  global super_command = "^r"
+  Send %super_command%
   return 
   
 ; New tab
 ;#t::
   ;Send ^t
-  global is_mac_super_relevant = 1
+;
   pipe_ctrl("^tab")
   return 
 
@@ -727,8 +743,9 @@ Lwin & y::
 Lwin & w::
   ;Send ^w
   ;MsgBox %A_ThisHotKey%
-  global is_mac_super_relevant = 1
-  pipe_ctrl("^w")
+;
+  global super_command = "^w"
+  Send %super_command%
   return 
 
 ; Close windows (cmd + q to Alt + F4)
@@ -736,10 +753,10 @@ Lwin & w::
    return
 
 ;open run similar to spotlight
-#Space::
-  global is_mac_super_relevant = 1
-  pipe_ctrl("#r")
-  return
+;#Space::
+;
+ ; pipe_ctrl("#r")
+  ;return
   
 ; Remap Windows + Tab to Alt + Tab.
 ;Lwin & Tab::AltTab
@@ -752,19 +769,20 @@ Lwin & w::
 ; Note: Shared Mac basics will remain such as ^a for beginning of line
 ; TODO: turn on other Mac shortcuts such as super+W etc
 ^`::  
-   global is_emacs
+   global try_emacs
+   global try_mac
    WinGetClass, class, A
    ;wtf := Process, Exist, "Code.exe"
    
    WinGet, wtf, ProcessName, A ;, ALControl & xLControl & s
     ;ahk_exe %activeprocess%
     
-   If (is_emacs){
-	MsgBox, 48, %wtf% , Emacs Mode is active (%is_emacs%) now, 2
-       global is_emacs = 0
+   If (try_emacs){
+	MsgBox, 48, %wtf% , Emacs Mode is active (%try_emacs%) now, 2
+       global try_emacs = 0
    }Else{ 
-	MsgBox, 48, %wtf%, Emacs is off (%is_emacs%)- Mac is still active now, 2
-		global is_emacs = 1
+	MsgBox, 48, %wtf%, Emacs is off (%try_emacs%)- Mac is still active now, 2
+		global try_emacs = 1
 	}
 	return
 Esc & x::
