@@ -440,6 +440,27 @@ backward_char()
     Send {Left}
   Return
 }
+;!b
+backward_word()
+{
+  global
+  if is_pre_spc
+     Send +^{Left}
+  Else
+     Send ^{Left}
+  Return
+}
+
+forward_word()
+{
+  global
+  if is_pre_spc
+     Send +^{Right}
+  Else
+     Send ^{Right}
+  Return
+}
+
 
 ; --------------------------------------------------
 ; hotkey triggers
@@ -552,8 +573,22 @@ Alt & <::
   execute_this( "+!.", "nada", "scroll_all_up", super_command )
    ;  is_target(1) ?
    ;do_emacs_only( A_ThisHotkey , scroll_all_up)
-   Return 
-  
+   Return
+
+Alt & b::
+  global super_command
+  execute_this( "!b","nada", "backward_word", super_command )
+
+    ;  backward_word()
+   Return
+
+Alt & f::
+  global super_command
+  execute_this( "!f","nada", "forward_word", super_command )
+
+    ;  forward_word()
+   Return
+
 LControl & {::
    global super_command
   execute_this( "^v", "nada", "scroll_up", super_command )
