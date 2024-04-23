@@ -445,23 +445,23 @@ backward_char()
 ; hotkey triggers
 ; --------------------------------------------------
 
-; Using LControl instead of ^ because most of the time 
+; Using LControl instead of ^ because most of the time
 ; I am using a virtual keyboard on my windows machine
 ; via Symless' Synergy keyboard and Mouse sharing
-; Seems that the ^ key doesn't get held down properly 
-; so binding to 
-; LControl & key 
-; works but binding to ^key  does not work. weird 
+; Seems that the ^ key doesn't get held down properly
+; so binding to
+; LControl & key
+; works but binding to ^key  does not work. weird
 ; When "Send"ing the hot key I need to modify it otherwise it just prints out the word "LControl & Key"
 
 LControl & x::
   global super_command
   execute_this( "^x", "nada", "set_pre_x", super_command )
-  Return 
+  Return
 LControl & c::
   global super_command
   execute_this( "^c", "nada", "kill_emacs", super_command )
-  Return  
+  Return
 ;; ^o::
 ;;   If is_target()
 ;;     pipe_ctrl( A_ThisHotkey )
@@ -488,65 +488,65 @@ LControl & m::
   execute_this( "^m", "nada", "newline", super_command )
    ; newline()
   Return
-  
+
 LControl & i::
   global super_command
   execute_this( "^i", "nada", "indent_for_tab_command", super_command )
    ; indent_for_tab_command()
   Return
-  
+
 LControl & s::
-    global super_command 
+    global super_command
   execute_this( "^s", "save_buffer", "save_buff_or_search", super_command )
   Return
-  
+
 LControl & r::
-  global super_command 
+  global super_command
   execute_this( "^r", "isearch_backward", "isearch_backward", super_command )
    ; isearch_backward()
   Return
-  
+
 LControl & w::
-  global super_command 
+  global super_command
   execute_this( "^w", "nada", "kill_region", super_command )
    ; kill_region()
   Return
-  
+
 !w::
-  global super_command 
+  global super_command
   execute_this( "!w", "nada", "kill_ring_save", super_command )
    ; kill_ring_save()
   Return
-  
+
 LControl & y::
-  global super_command 
+  global super_command
   execute_this( "^y", "yank", "yank", super_command )
     ;yank()
   Return
 
 ; +^-::      ; if not using Synergy uncomment this
 LControl & -::   ; if using Synergy uncomment this
-  global super_command 
+  global super_command
   execute_this( "^-", "nada", "undo", super_command )
       ;scroll_up()
    ; undo()
-  Return  
+  Return
 
 LControl & /::
-  If is_target(1){ 
+  If is_target(1){
     pipe_ctrl( A_ThisHotkey )
 }
   Else
     undo()
-  Return  
-  
+  Return
+
 Alt & >::
   global super_command
   execute_this( "+!.","nada", "scroll_all_down", super_command )
- 
+
     ;  scroll_all_down()
-   Return 
-   
+   Return
+
 Alt & <::
   global super_command
   execute_this( "+!.", "nada", "scroll_all_up", super_command )
@@ -555,23 +555,23 @@ Alt & <::
    Return 
   
 LControl & {::
-   global super_command 
+   global super_command
   execute_this( "^v", "nada", "scroll_up", super_command )
       ;scroll_up()
-   Return 
-   
+   Return
+
 LControl & }::
-  global super_command 
+  global super_command
   execute_this( "^v", "nada", "scroll_down", super_command )
-  Return 
-   
+  Return
+
 LControl & v::
-  global super_command 
+  global super_command
   execute_this( "^v", "scroll_down", "scroll_down", super_command )
   Return
-  
+
 !v::
-  global super_command 
+  global super_command
   execute_this( "!v", "nada", "scroll_up", super_command )
    ; scroll_up()
   Return
@@ -583,7 +583,7 @@ LControl & p::
   Return
 
 LControl & n::
-  global super_command 
+  global super_command
   execute_this( "^n", "next_line", "next_line", super_command )
   Return
 
@@ -595,9 +595,9 @@ LControl & vk20::
   execute_this( "{CtrlDown}{Space}{CtrlUp}", "mark_line", "mark_line", super_command )
    ; Send {CtrlDown}{Space}{CtrlUp}
   Return
-  
+
 LControl & @::
-  If is_target(1){ 
+  If is_target(1){
     pipe_ctrl( A_ThisHotkey )
 }
   Else
@@ -609,39 +609,39 @@ LControl & @::
   }
   Return
 LControl & d::
-  global super_command 
+  global super_command
   execute_this( "^d", "delete_char", "delete_char", super_command )
   Return
 LControl & h::
-  global super_command 
+  global super_command
   execute_this( "^h", "delete_backward_char", "delete_backward_char", super_command )
   Return
 LControl & k::
-  global super_command 
+  global super_command
   execute_this( "^k", "kill_line", "kill_line", super_command )
   Return
 
 ; ^a
 LControl & a::
-  global super_command 
+  global super_command
   execute_this( "^a", "move_beginning_of_line", "move_beginning_of_line", super_command )
   Return
-  
+
 LControl & e::
-  global super_command 
+  global super_command
   execute_this( "^e", "move_end_of_line", "move_end_of_line", super_command )
   Return
-  
+
 ; ^b
 LControl & b::
-  global super_command 
+  global super_command
   execute_this( "^b", "backward_char", "backward_char", super_command )
   Return
 
 LControl & f:: ; TODO: fix up is_pre_x
-  global super_command 
+  global super_command
   execute_this( "^f", "nada", "find_file_or_fwd", super_command )
-  Return  
+  Return
 ; --------------------------------------------------------------
 ; Mac-like screenshots in Windows (requires Windows 10 Snip & Sketch)
 ; --------------------------------------------------------------
@@ -651,7 +651,7 @@ LControl & f:: ; TODO: fix up is_pre_x
 
 ; Capture portion of the screen with CMD/WIN + SHIFT + 4
 #+4::#+s
-  
+
 ; --------------------------------------------------------------
 ; OS X system shortcuts
 ; --------------------------------------------------------------
@@ -661,15 +661,15 @@ LControl & f:: ; TODO: fix up is_pre_x
   global super_command = "^s"
   Send, ^s
   return
-  
+
 ; Selecting
 LWin & a::
   global super_command = "^a"
   Send %super_command%
 ;
   ;pipe_ctrl("^a")
-  return 
- 
+  return
+
 ; Copying
 LWin & c::
   Send {Lwin up}
@@ -677,13 +677,13 @@ LWin & c::
   global super_command = "{ctrldown}{c}{ctrlup}"
   Send %super_command%
   return
-  
+
 ; Pasting
 LWin & v::
 ;
   global super_command = "^v"
   Send %super_command%
-  return 
+  return
 
 ; Cutting
 #x::
@@ -691,7 +691,7 @@ LWin & v::
 ;
   global super_command = "^x"
   send %super_command%
-  return 
+  return
 
 ; Opening
 #o::
@@ -699,7 +699,7 @@ LWin & v::
 ;
   global super_command = "^o"
   Send %super_command%
-  return 
+  return
 
 ; Finding
 LWin & f::
@@ -707,7 +707,7 @@ LWin & f::
 ;
   global super_command = "^f"
   Send %super_command%
-  return 
+  return
 
 ; Undo;
 LWin & z::
@@ -715,7 +715,7 @@ LWin & z::
 ;
   global super_command = "^z"
   Send %super_command%
-  return 
+  return
 
 ; Redo
 Lwin & y::
@@ -723,21 +723,21 @@ Lwin & y::
 ;
   global super_command = "^y"
   Send %super_command%
-  return 
+  return
 
 ;refresh
 #r::
 ;
   global super_command = "^r"
   Send %super_command%
-  return 
-  
+  return
+
 ; New tab
 ;#t::
   ;Send ^t
 ;
   pipe_ctrl("^tab")
-  return 
+  return
 
 ; close tab
 Lwin & w::
@@ -746,7 +746,7 @@ Lwin & w::
 ;
   global super_command = "^w"
   Send %super_command%
-  return 
+  return
 
 ; Close windows (cmd + q to Alt + F4)
 #q::Send !{F4}
@@ -757,30 +757,30 @@ Lwin & w::
 ;
  ; pipe_ctrl("#r")
   ;return
-  
+
 ; Remap Windows + Tab to Alt + Tab.
 ;Lwin & Tab::AltTab
 
 ; minimize windows
 ;#m::WinMinimize,a
 
-   
+
 ;toggle Emacs using Esc key
 ; Note: Shared Mac basics will remain such as ^a for beginning of line
 ; TODO: turn on other Mac shortcuts such as super+W etc
-^`::  
+^`::
    global try_emacs
    global try_mac
    WinGetClass, class, A
    ;wtf := Process, Exist, "Code.exe"
-   
+
    WinGet, wtf, ProcessName, A ;, ALControl & xLControl & s
     ;ahk_exe %activeprocess%
-    
+
    If (try_emacs){
 	MsgBox, 48, %wtf% , Emacs Mode is active (%try_emacs%) now, 2
        global try_emacs = 0
-   }Else{ 
+   }Else{
 	MsgBox, 48, %wtf%, Emacs is off (%try_emacs%)- Mac is still active now, 2
 		global try_emacs = 1
 	}
@@ -788,5 +788,4 @@ Lwin & w::
 Esc & x::
    MsgBox, 48, ShortcutKeys, Emacs & Mac are off (you must relaunch the script), 4
    ExitApp  ;Escape + x key will exit
-
 
